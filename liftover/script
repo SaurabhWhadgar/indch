@@ -1,0 +1,8 @@
+The script "completeIncompleteGennes.sh" is for adding a parent mRNA for any gene whose mRNA did not get lifted. To run this script, you need to have a list of all incomplete genes, and also change filenames in the script. How you can do that is as follows:
+1. cut -f9 <output of liftGenes/converted coordinate gff file> | grep "Parent=" | sed -e 's/Parent=//g' | sed -e 's/;.*//g' > listOfCompleteGenes.txt
+2. grep -f listOfCompleteGenes.txt <output of liftGenes/converted coordinate gff file> > <output of liftGenes/converted coordinate gff file>.onlyCompleteGenes.gff
+3. grep -v -f listOfCompleteGenes.txt <output of liftGenes/converted coordinate gff file> > <output of liftGenes/converted coordinate gff file>.IncompleteGenes.gff
+4. cut -f9 <output of liftGenes/converted coordinate gff file>.IncompleteGenes.gff | uniq | sed -e 's/ID=//g' | sed -e 's/;.*//g' > listOfCompleteGenes.txt
+5. bash completeIncompleteGennes.sh
+6. cat <output of liftGenes/converted coordinate gff file>.onlyCompleteGenes.gff <output of completeIncompleteGennes.sh> > allGenes.gff
+Here, you may have to check the gff file to make changes in the commands listed here, but the general pattern should work.
