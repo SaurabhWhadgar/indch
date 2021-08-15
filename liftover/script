@@ -6,3 +6,52 @@ The script "completeIncompleteGennes.sh" is for adding a parent mRNA for any gen
 5. bash completeIncompleteGennes.sh
 6. cat <output of liftGenes/converted coordinate gff file>.onlyCompleteGenes.gff <output of completeIncompleteGennes.sh> > allGenes.gff
 Here, you may have to check the gff file to make changes in the commands listed here, but the general pattern should work.
+
+----
+Raw
+----
+
+ncumer --maxmatch --noextend UCI_chr2.fa IndCh_Chr2R.fa > uci_indch_chr2.delta
+lastz  IndCh_Chr2R.fa  UCI_chr2.fa --notransition --step=20 --nogapped --format=maf > out.maf
+
+delta2maf out.delta > out.maf
+maf-convert psl out.maf > out.psl
+faToTwoBit /home/saurabh/liftover/data/fasta/UCI_chr2.fa UCI_chr2.2bit
+faToTwoBit /home/saurabh/liftover/data/fasta/IndCh_Chr2R.fa IndCh_Chr2R.2bit
+axtChain -psl out.psl IndCh_Chr2R.2bit UCI_chr2.2bit out.chain -linearGap=medium
+twoBitInfo UCI_chr2.2bit UCI.chrmoinfo
+twoBitInfo IndCh_Chr2R.2bit IndCh.chromoinfo
+chainNet out.chain IndCh.chromoinfo UCI.chrmoinfo all.net /dev/null
+netChainSubset all.net out.chain finalOutput.chain
+liftOver /home/saurabh/liftover/data/gff/indch2.gff finalOut.chain indchOnUci.gff unmapped
+less IndCh_nonInv_genes.gff 
+
+blat uci.2bit indch.fa out.psl -tileSize=12 -minScore=100 -minIdentity=98 -fastMap
+
+lastz UCI_chr2.fa IndCh_Chr2R.fa --notransition --step=20 --nogapped --format=maf > lastz.maf
+
+minimap2 -c Indh UCI | paftools.js liftover -l10000 - <(echo -e "IndCh\t2000\t5000")
+
+
+./bin/GSAlign index ../liftover/fasta/with_lastz_IonU/paf/UCI_chr2.fa  uci_bwt
+bin/GSAlign -i uci_bwt -q ../liftover/fasta/with_lastz_IonU/paf/IndCh_Chr2R.fa -o output -t 3
+
+/home/saurabh/nextflow run evotools/nf-LO --source UCI_chr2.fa --target IndCh_Chr2R.fa  --annotation IndCh_nonInv_genes.gff --annotation_format gff \
+--distance near --aligner lastz --tgtSize 10000000 --tgtOvlp 100000 --srcSize 20000000 --liftover_algorithm crossmap \
+--outdir ./my_liftover --publish_dir_mode copy --max_cpus 4 --max_memory 15.GB --profile conda 
+
+
+unimap -cxasm5 --cs -t8 /home/saurabh/liftover/data/fasta/UCI_chr2.fa /home/saurabh/liftover/data/fasta/IndCh_Chr2R.fa > unimap_ONE.paf
+unimap -cxasm5 --cs -t8 /home/saurabh/liftover/data/fasta/IndCh_Chr2R.fa /home/saurabh/liftover/data/fasta/UCI_chr2.fa > unimap_TWO.paf
+paftools.js liftover unimap_TWO.paf /home/saurabh/liftover/data/gff/tigs2.gff > tigs_lifted_TWO.gff
+
+
+/home/saurabh/Downloads/mummer/nucmer --maxmatch --noextend /home/saurabh/liftover/data/fasta/UCI_chr2.fa /home/saurabh/liftover/data/fasta/IndCh_Chr2R.fa > uci_indch_ONE.delta
+
+
+=== mlift ===
+nucmer --maxmatch --noextend --prefix uci2indch_filter /home/saurabh/liftover/data/fasta/UCI_chr2.fa /home/saurabh/liftover/data/fasta/IndCh_Chr2R.fa
+delta-filter -r -q uci2indch_filter.delta > uci2indch.rq.delta
+mlift ref2q.delta foo.bed s
+
+transanno liftgene GENCODE.gtf.gz --chain CHAINFILE.chain --failed FAILED.gtf.gz --output SUCCEEDED.gtf.gz
